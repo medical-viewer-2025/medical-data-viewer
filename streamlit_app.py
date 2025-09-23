@@ -3,32 +3,6 @@ import pandas as pd
 import os
 from datetime import datetime
 
-# 認証機能
-def check_password():
-    def password_entered():
-        if st.session_state["password"] == "medical2025":  # パスワードを設定
-            st.session_state["password_correct"] = True
-            del st.session_state["password"]
-        else:
-            st.session_state["password_correct"] = False
-
-    if "password_correct" not in st.session_state:
-        st.title("🔐 医療データ閲覧ツール - ログイン")
-        st.text_input("パスワードを入力してください", type="password", on_change=password_entered, key="password")
-        st.info("チームメンバー専用システムです")
-        return False
-    elif not st.session_state["password_correct"]:
-        st.title("🔐 医療データ閲覧ツール - ログイン") 
-        st.text_input("パスワードを入力してください", type="password", on_change=password_entered, key="password")
-        st.error("パスワードが正しくありません")
-        return False
-    else:
-        return True
-
-# 認証チェック
-if not check_password():
-    st.stop()
-
 # PDF 出力用
 from reportlab.lib.pagesizes import A4
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
@@ -44,6 +18,49 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
+# レイアウト修正CSS
+st.markdown("""
+<style>
+    /* サイドバーを完全に隠す */
+    .css-1d391kg, .css-1544g2n, .css-1y4p8pa {
+        display: none !important;
+    }
+    
+    /* メインコンテンツエリアを最大幅に */
+    .main .block-container {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+        max-width: none !important;
+        width: 100% !important;
+    }
+    
+    /* Streamlitのデフォルトマージンをリセット */
+    .main {
+        padding: 0 !important;
+    }
+    
+    /* ヘッダー部分の調整 */
+    header[data-testid="stHeader"] {
+        display: none;
+    }
+    
+    /* タブコンテナの幅調整 */
+    .stTabs {
+        width: 100%;
+    }
+    
+    /* データフレームの表示調整 */
+    .dataframe {
+        width: 100% !important;
+    }
+    
+    /* ファイルアップローダーの幅調整 */
+    .uploadedFile {
+        width: 100%;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # 日本語フォント登録
 try:
     pdfmetrics.registerFont(UnicodeCIDFont("HeiseiKakuGo-W5"))
@@ -53,6 +70,69 @@ except:
 # 保存フォルダ
 DATA_DIR = "data"
 os.makedirs(DATA_DIR, exist_ok=True)
+
+# =====================
+# 認証機能
+# =====================
+def check_password():
+    """パスワード認証を行う"""
+    def password_entered():
+        """パスワードが入力された時の処理"""
+        correct_password = "medical2025"
+        
+        if st.session_state["password"] == correct_password:
+            st.session_state["password_correct"] = True
+            del st.session_state["password"]  # セキュリティのためパスワードを削除
+        else:
+            st.session_state["password_correct"] = False
+
+    # 認証状態の確認
+    if "password_correct" not in st.session_state:
+        # 初回アクセス時
+        st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
+        st.title("🔐 医療データ閲覧ツール - ログイン")
+        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("---")
+        
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.markdown("### アクセスにはパスワードが必要です")
+            st.text_input(
+                "パスワードを入力してください", 
+                type="password", 
+                on_change=password_entered, 
+                key="password",
+                placeholder="パスワードを入力"
+            )
+            st.info("パスワードは管理者から配布されたものを使用してください")
+        return False
+    elif not st.session_state["password_correct"]:
+        # パスワードが間違っている場合
+        st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
+        st.title("🔐 医療データ閲覧ツール - ログイン")
+        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("---")
+        
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            st.text_input(
+                "パスワードを入力してください", 
+                type="password", 
+                on_change=password_entered, 
+                key="password",
+                placeholder="パスワードを入力"
+            )
+            st.error("❌ パスワードが正しくありません。もう一度入力してください。")
+        return False
+    else:
+        # 認証成功
+        return True
+
+# =====================
+# メイン認証チェック
+# =====================
+if not check_password():
+    st.stop()
 
 # =====================
 # ユーティリティ関数
@@ -200,30 +280,20 @@ def export_pdf_b(df_b, df_master, mode="all"):
 # =====================
 # メインアプリケーション
 # =====================
-# レイアウト調整用CSS
-st.markdown("""
-<style>
-    .main .block-container {
-        padding-left: 1rem;
-        padding-right: 1rem;
-        max-width: none;
-    }
-    .sidebar .sidebar-content {
-        display: none;
-    }
-</style>
-""", unsafe_allow_html=True)
-
 def main():
-    st.title("🏥 医療データ閲覧ツール")
-# ログアウト機能
-col1, col2, col3 = st.columns([1, 6, 1])
-with col3:
-    if st.button("ログアウト"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.rerun()
-    st.markdown("**A/Bデータの検索・閲覧・PDF出力**")
+    # ヘッダー部分
+    col1, col2 = st.columns([4, 1])
+    with col1:
+        st.title("🏥 医療データ閲覧ツール")
+        st.markdown("**A/Bデータの検索・閲覧・PDF出力**")
+    with col2:
+        st.write("")  # スペース調整
+        if st.button("🚪 ログアウト", key="logout_btn"):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.rerun()
+
+    st.markdown("---")
 
     tab1, tab2 = st.tabs(["📊 Aデータ", "🏥 Bデータ"])
 
@@ -251,7 +321,7 @@ with col3:
         if df_a is not None:
             st.subheader("📋 全件リスト")
             st.info(f"総件数: {len(df_a)}件")
-            st.dataframe(df_a, use_container_width=True)
+            st.dataframe(df_a, use_container_width=True, height=300)
 
             st.subheader("🔍 検索条件")
             
@@ -290,7 +360,7 @@ with col3:
                 filtered_a = st.session_state["a_filtered"]
                 st.subheader("📋 検索結果一覧")
                 st.info(f"検索結果: {len(filtered_a)}件")
-                st.dataframe(filtered_a, use_container_width=True)
+                st.dataframe(filtered_a, use_container_width=True, height=300)
 
                 st.subheader("📄 検索結果詳細表示")
                 for idx, record in enumerate(filtered_a.to_dict(orient="records")):
@@ -348,7 +418,7 @@ with col3:
         if df_master is not None and df_b is not None:
             st.subheader("📋 全件リスト")
             st.info(f"総件数: {len(df_b)}件")
-            st.dataframe(df_b, use_container_width=True)
+            st.dataframe(df_b, use_container_width=True, height=300)
 
             st.subheader("🔍 検索条件")
             col1, col2 = st.columns([3,1])
@@ -371,7 +441,7 @@ with col3:
                 filtered_b = st.session_state["b_filtered"]
                 st.subheader("📋 検索結果一覧")
                 st.info(f"検索結果: {len(filtered_b)}件")
-                st.dataframe(filtered_b, use_container_width=True)
+                st.dataframe(filtered_b, use_container_width=True, height=300)
 
             st.subheader("🏥 診療科別統計")
             counts = dept_counts(df_b, df_master)
