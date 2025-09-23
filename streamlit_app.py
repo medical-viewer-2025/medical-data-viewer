@@ -40,7 +40,8 @@ from reportlab.pdfbase.cidfonts import UnicodeCIDFont
 st.set_page_config(
     layout="wide",
     page_title="医療データ閲覧ツール",
-    page_icon="🏥"
+    page_icon="🏥",
+    initial_sidebar_state="collapsed"
 )
 
 # 日本語フォント登録
@@ -199,11 +200,25 @@ def export_pdf_b(df_b, df_master, mode="all"):
 # =====================
 # メインアプリケーション
 # =====================
+# レイアウト調整用CSS
+st.markdown("""
+<style>
+    .main .block-container {
+        padding-left: 1rem;
+        padding-right: 1rem;
+        max-width: none;
+    }
+    .sidebar .sidebar-content {
+        display: none;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 def main():
     st.title("🏥 医療データ閲覧ツール")
 # ログアウト機能
-col1, col2 = st.columns([8, 1])
-with col2:
+col1, col2, col3 = st.columns([1, 6, 1])
+with col3:
     if st.button("ログアウト"):
         for key in list(st.session_state.keys()):
             del st.session_state[key]
